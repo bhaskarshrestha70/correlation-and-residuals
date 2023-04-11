@@ -1,0 +1,27 @@
+library(raster)
+library(sp)
+library(sf)
+library(rgdal)
+getwd()
+setwd("D:/R/Nepal_rasters_fromGEE")
+
+ndvilist <- list.files (path = "D:/R/Nepal_rasters_fromGEE/NDVI/NDVI_13Q1_1km", pattern = ".tif$", full.names = TRUE)
+ndvistack <- stack(ndvilist)
+
+pptnlist <- list.files (path = "D:/R/Nepal_rasters_fromGEE/CHIRPS/Annual_rainfall_00_21", pattern = ".tif$", full.names = TRUE)
+pptnstack <- stack(pptnlist)
+
+lstlist <- list.files (path = "D:/R/Nepal_rasters_fromGEE/LST/LST_00_21", pattern = ".tif$", full.names = TRUE)
+lststack <- stack(lstlist)
+
+ndvi_lst_cor <- corLocal(ndvistack , lststack , test = T)
+plot(ndvi_lst_cor)
+writeRaster(ndvi_lst_cor[[1]], "mod13q1_Annual_ndvi_lst_pcorr.tif", overwrite = TRUE)
+writeRaster(ndvi_lst_cor[[2]], "mod13q1_Annual_ndvi_lst_pvalue.tif", overwrite = TRUE)
+
+
+# Calculate the correlation between NDVI and Rainfall
+ndvi_pptn_cor <- corLocal(ndvistack , pptnstack , test = T)
+plot(ndvi_pptn_cor)
+writeRaster(ndvi_pptn_cor[[1]], "mod13q1_Annual_ndvi_rainfall_pcorr.tif", overwrite = TRUE)
+writeRaster(ndvi_pptn_cor[[2]], "mod13q1_Annual_ndvi_rainfall_pvalue.tif", overwrite = TRUE)
