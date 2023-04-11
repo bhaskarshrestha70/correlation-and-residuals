@@ -1,0 +1,28 @@
+ibrary(raster)
+library(sp)
+library(sf)
+library(rgdal)
+getwd()
+setwd("D:/R/Nepal_rasters_fromGEE")
+
+ndvilist <- list.files (path = "D:/R/Nepal_rasters_fromGEE/Rextractedtiffs/ndvi/extracted", pattern = ".tif$", full.names = TRUE)
+ndvistack <- stack(ndvilist)
+
+lstlist <- list.files (path = "D:/R/Nepal_rasters_fromGEE/Rextractedtiffs/lst", pattern = ".tif$", full.names = TRUE)
+lststack <- stack(lstlist)
+pptnlist <- list.files (path = "D:/R/Nepal_rasters_fromGEE/Rextractedtiffs/rainfall", pattern = ".tif$", full.names = TRUE)
+pptnstack <- stack(pptnlist)
+
+regression_coefficients <- calc(stack(ndvistack, lststack, pptnstack), fun = function(x) {
+  if (all(is.na(x))) {
+    return(c(NA, NA))
+  } else {
+    return(coef(lm(x[1:nlayers(ndvistack)] ~ x[(nlayers(ndvistack)+1):(nlayers(ndvistack)+nlayers(lststack))] + x[(nlayers(ndvistack)+nlayers(lststack)+1):(nlayers(ndvistack)+nlayers(lststack)+nlayers(pptnstack))]))[2:3])
+  }
+})
+
+#This will create a multi-band raster file where the first band represents the regression coefficients for LST 
+#and the second band represents the regression coefficients for precipitation.
+
+writeRaster(regression_coefficients, filename = "multi_regress_coeff_v1.tif")
+plot(regression_coefficients)
