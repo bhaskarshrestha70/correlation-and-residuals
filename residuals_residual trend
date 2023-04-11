@@ -1,0 +1,48 @@
+library(raster)
+library(sp)
+library(sf)
+library(rgdal)
+getwd()
+setwd("D:/R/Nepal_rasters_fromGEE")
+
+ndvilist <- list.files (path = "D:/R/Nepal_rasters_fromGEE/Rextractedtiffs/ndvi/extracted", pattern = ".tif$", full.names = TRUE)
+ndvistack <- stack(ndvilist)
+lstlist <- list.files (path = "D:/R/Nepal_rasters_fromGEE/Rextractedtiffs/lst", pattern = ".tif$", full.names = TRUE)
+lststack <- stack(lstlist)
+pptnlist <- list.files (path = "D:/R/Nepal_rasters_fromGEE/Rextractedtiffs/rainfall", pattern = ".tif$", full.names = TRUE)
+pptnstack <- stack(pptnlist)
+
+residuals <- calc(stack(ndvistack, lststack, pptnstack), fun = function(x) {
+  if (all(is.na(x))) {
+    return(rep(NA, nlayers(ndvistack)))
+  } else {
+    model <- lm(x[1:nlayers(ndvistack)] ~ x[(nlayers(ndvistack)+1):(nlayers(ndvistack)+nlayers(lststack))] + x[(nlayers(ndvistack)+nlayers(lststack)+1):(nlayers(ndvistack)+nlayers(lststack)+nlayers(pptnstack))])
+    return(residuals(model))
+  }
+})
+
+writeRaster(residuals, filename = "residuals.tif")
+plot(residuals)
+
+residuals <- brick("residuals.tif")
+
+trend <- calc(residuals, fun = function(x) {
+  if (all(is.na(x))) {
+    return(NA)
+  } else {
+    return(coef(lm(x ~ seq_along(x)))[2])
+  }
+})
+
+p_value <- calc(residuals, fun = function(x) {
+  if (all(is.na(x))) {
+    return(NA)
+  } else {
+    return(summary(lm(x ~ seq_along(x)))$coefficients[2,4])
+  }
+})
+
+writeRaster(trend, filename = "residualtrend.tif")
+plot(trend)
+writeRaster(p_value, filename = "residualp_value.tif")
+plot(p_value)
